@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: security-sentinel
+        name: Security Sentinel Scan
+        entry: python3 -m sentinel.cli scan
+        language: system
+        pass_filenames: false
+        always_run: true
