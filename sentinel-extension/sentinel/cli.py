@@ -51,12 +51,12 @@ def watch(background):
         click.echo(click.style("⚠️  Watcher is already running (or .sentinel.pid exists).", fg="yellow"))
         return
 
-    from sentinel.watcher import start_watcher
+    from .watcher import start_watcher
     
     if background:
         import subprocess
         # Start the process in a new session to detach it from the current terminal
-        cmd = [sys.executable, "-m", "sentinel.cli", "watch"]
+        cmd = [sys.executable, "-m", "sentinel-extension.sentinel.cli", "watch"]
         process = subprocess.Popen(
             cmd, 
             stdout=subprocess.DEVNULL, 
