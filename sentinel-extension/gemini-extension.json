@@ -1,9 +1,9 @@
 {
-  "name": "security-sentinel",
+  "name": "sentinel",
   "version": "1.0.0",
   "description": "Integrated security agent for secret detection and proactive monitoring.",
   "mcpServers": {
-    "security-sentinel": {
+    "sentinel": {
       "command": "python3",
       "args": ["-m", "sentinel.mcp_server"]
     }
