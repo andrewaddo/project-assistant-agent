@@ -3,3 +3,4 @@ watchdog
 mcp
 pre-commit
 click
+pytest

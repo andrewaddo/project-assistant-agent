@@ -20,16 +20,32 @@ class SentinelEngine:
     def scan(self, path: Optional[str] = None, staged: bool = False) -> Dict:
         """Runs both detect-secrets and custom regex scans."""
         # 1. Run detect-secrets
-        ds_cmd = ["python3", "-m", "detect_secrets", "scan", "--all-files", "--exclude-files", r".*secrets\.baseline"]
+        ds_cmd = ["python3", "-m", "detect_secrets", "scan", "--all-files", "--exclude-files", r".*secrets\.baseline", "--exclude-files", r"^tests/.*"]
         if path:
             ds_cmd.append(path)
         else:
-            ds_cmd.append(self.root_dir)
+            ds_cmd.append(".")
 
         try:
-            result = subprocess.run(ds_cmd, capture_output=True, text=True, check=True)
-            findings = json.loads(result.stdout)
-        except (subprocess.CalledProcessError, json.JSONDecodeError):
+            result = subprocess.run(ds_cmd, capture_output=True, text=True, check=True, cwd=self.root_dir)
+            ds_raw = json.loads(result.stdout)
+            
+            # Use paths exactly as provided by detect-secrets, but ensure they are relative 
+            # to root_dir if they are absolute. Usually detect-secrets returns relative paths.
+            normalized_results = {}
+            for fp, secrets in ds_raw.get("results", {}).items():
+                if os.path.isabs(fp) and fp.startswith(self.root_dir):
+                    rel_fp = os.path.relpath(fp, self.root_dir)
+                    normalized_results[rel_fp] = secrets
+                else:
+                    normalized_results[fp] = secrets
+                    
+            findings = {"results": normalized_results}
+        except subprocess.CalledProcessError as e:
+            print(f"DEBUG: detect-secrets failed with {e.returncode}: {e.stderr}")
+            findings = {"results": {}}
+        except json.JSONDecodeError as e:
+            print(f"DEBUG: JSON parse failed: {e}")
             findings = {"results": {}}
 
         # 2. Run Custom Regex Scan
@@ -56,7 +72,7 @@ class SentinelEngine:
                         files_to_scan.append(os.path.join(root, f))
         else:
             for root, dirs, files in os.walk(self.root_dir):
-                if ".git" in root or "__pycache__" in root or "sentinel" in root:
+                if ".git" in root or "__pycache__" in root or "sentinel" in root or "tests" in root:
                     continue
                 for f in files:
                     files_to_scan.append(os.path.join(root, f))
