@@ -1,1 +1,2 @@
 API_KEY=Sample_KEY_123456
+DB_PASSWORD=Sample_password
