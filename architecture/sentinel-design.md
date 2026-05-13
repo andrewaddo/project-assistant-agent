@@ -1,14 +1,16 @@
 # Architecture Design: Security Sentinel Ecosystem
 
-The Security Sentinel is a multi-layered defense-in-depth system designed to prevent secret leakage at the source. It uses a single core engine with multiple entry points (Adapters).
+The Security Sentinel is a multi-layered defense-in-depth system packaged as a **Gemini CLI Extension**. It bundles a core engine with multiple adapters for native agent integration.
 
 ## 1. System Architecture Overview
 
 ```mermaid
 graph TD
-    User((Developer)) -->|Saves File| Watcher[Background Watcher]
+    User((Developer)) -->|Slash Command| SlashCommands[/sentinel:scan, watch, etc./]
+    User -->|Saves File| Watcher[Background Watcher]
     User -->|Git Commit| GitHook[Pre-commit Hook]
-    User -->|CLI Command| CLI[Sentinel CLI]
+    
+    SlashCommands --> CLI[Sentinel CLI]
     
     Agent((AI Agent)) -->|MCP Protocol| MCPServer[MCP Adapter]
     Agent -->|Skill Instructions| GeminiSkill[Gemini Skill Adapter]
@@ -31,32 +33,26 @@ graph TD
 
 ## 2. Component Breakdown
 
-### A. The Core Engine (`sentinel/engine.py`)
-- **Logic**: Wraps `detect-secrets`. It doesn't just find secrets; it compares them against the "Baseline."
-- **State**: The `.secrets.baseline` file is the source of truth. If a secret's hash is in the baseline, it is considered an "approved exception."
-- **Categorization**: 
-  - **Critical**: Private Keys (`.pem`), AWS Secret Keys.
-  - **High**: Generic API Keys, Bearer Tokens.
-  - **Medium**: High-entropy strings in config files.
+### A. The Gemini Extension Manifest (`gemini-extension.json`)
+- **Role**: The entry point for the CLI. It registers the extension name, bundles the skill, and automatically configures the MCP server.
 
-### B. Proactive Watcher (`sentinel/watcher.py`)
-- **Operation**: A persistent process triggered via `sentinel watch`.
-- **Mechanism**: Uses `watchdog` to hook into OS-level file system events. 
-- **Efficiency**: Only scans the specific file that was modified, keeping overhead near zero.
-- **UX**: Prints a high-visibility warning to the terminal immediately upon save.
+### B. Native Slash Commands (`commands/sentinel/*.toml`)
+- **Role**: Provides the native UI dropdown in the Gemini CLI.
+- **Commands**:
+  - `/sentinel:scan`: Trigger an audit.
+  - `/sentinel:watch`: Start background monitoring.
+  - `/sentinel:stop`: Kill background monitoring.
+  - `/sentinel:init`: Setup the baseline.
 
-### C. The MCP Adapter (`sentinel/mcp_server.py`)
-- **Purpose**: Interoperability with Claude Code and other MCP-native agents.
-- **Protocol**: Implements the Model Context Protocol over `stdio`.
-- **Tools Exposed**:
-  - `sentinel_scan(path)`: Scans a file or directory.
-  - `sentinel_status()`: Summarizes current baseline vs. new findings.
-  - `sentinel_approve(finding_id)`: Appends a finding to the baseline.
+### C. The Core Engine (`sentinel/`)
+- **Logic**: Unified Python code providing scanning, watcher, and MCP logic.
+- **State**: Managed via the `.secrets.baseline` file.
 
-### D. The Git Enforcement (`.pre-commit-config.yaml`)
-- **Purpose**: The "Hard Gate."
-- **Operation**: Runs `sentinel scan --staged` before every commit.
-- **Outcome**: Returns exit code 1 if new secrets are found, aborting the `git commit` command.
+### D. Bundled Agent Skill (`skills/security-sentinel/`)
+- **Role**: Provides the AI agent with the procedural knowledge to use the engine effectively.
+
+### E. Git Enforcement (`.pre-commit-config.yaml`)
+- **Role**: The final local gate before code leaves the machine.
 
 ## 3. Data Flow: The "Approval" Lifecycle
 

@@ -1,0 +1,2 @@
+description = "Run an on-demand security scan for secrets."
+prompt = "Sentinel, please perform a full security scan of the project to check for any unapproved secrets."

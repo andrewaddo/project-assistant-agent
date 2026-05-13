@@ -1,0 +1,5 @@
+detect-secrets
+watchdog
+mcp
+pre-commit
+click

@@ -1,0 +1,2 @@
+description = "Stop the background proactive watcher."
+prompt = "Sentinel, please stop the background watcher process."

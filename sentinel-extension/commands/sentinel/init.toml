@@ -1,0 +1,2 @@
+description = "Initialize or reset the security baseline (.secrets.baseline)."
+prompt = "Sentinel, please initialize the security baseline for this project."
