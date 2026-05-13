@@ -7,9 +7,17 @@ description: Proactively scans for secrets, keys, and sensitive data in the proj
 
 The Security Sentinel protects your project from accidental secret leakage (API keys, passwords, etc.). It provides both manual auditing and real-time background protection.
 
+## 🕹 Command Interface (Expansion)
+
+When the user mentions "Sentinel" or "/sentinel", follow these rules:
+
+1.  **No Subcommand**: If the user just says "Sentinel", **immediately use the `ask_user` tool** to provide a choice menu with: `scan`, `watch`, `stop`, and `init`.
+2.  **With Subcommand**: If the user specifies a command (e.g., "sentinel scan"), execute the corresponding tool immediately without asking.
+
 ## Available Tools (Subcommands)
 
 As the Security Sentinel agent, you have access to the following native tools. Execute them using `python3 -m sentinel.cli <command>` from the project root.
+...
 
 ### 1. `scan`
 **Usage**: `python3 -m sentinel.cli scan [--path <path>]`
