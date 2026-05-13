@@ -1,5 +1,5 @@
 ---
-name: security-sentinel
+name: sentinel
 description: Proactively scans for secrets, keys, and sensitive data in the project. Use this skill to initialize security baselines, perform ad-hoc scans, or start a background proactive watcher that alerts on new secrets immediately upon save.
 ---
 
