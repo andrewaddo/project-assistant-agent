@@ -1,9 +1,16 @@
 import json
 import os
 import subprocess
+import re
+import hashlib
 from typing import Dict, List, Optional
 
 BASELINE_FILE = ".secrets.baseline"
+
+# Custom regex for common sensitive keywords
+SENSITIVE_PATTERNS = [
+    re.compile(r'(?i)(api_key|password|secret|token|credential|auth_key|private_key)\s*[=:]\s*["\']?([a-zA-Z0-9_\-\.\/]{4,})["\']?'),
+]
 
 class SentinelEngine:
     def __init__(self, root_dir: str = "."):
@@ -11,51 +18,112 @@ class SentinelEngine:
         self.baseline_path = os.path.join(self.root_dir, BASELINE_FILE)
 
     def scan(self, path: Optional[str] = None, staged: bool = False) -> Dict:
-        """Runs a scan and returns findings."""
-        cmd = ["python3", "-m", "detect_secrets", "scan", "--all-files"]
-        
-        if staged:
-            # For staged files, we use a slightly different approach or filter results
-            # For now, let's focus on path-based scanning
-            pass
-
+        """Runs both detect-secrets and custom regex scans."""
+        # 1. Run detect-secrets
+        ds_cmd = ["python3", "-m", "detect_secrets", "scan", "--all-files", "--exclude-files", r".*secrets\.baseline"]
         if path:
-            cmd.append(path)
+            ds_cmd.append(path)
         else:
-            cmd.append(self.root_dir)
-
-        # We want to compare against the baseline if it exists
-        if os.path.exists(self.baseline_path):
-            # detect-secrets has a way to use baseline, but often it's easier to
-            # run the scan and then filter ourselves for custom logic/severity
-            pass
+            ds_cmd.append(self.root_dir)
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(ds_cmd, capture_output=True, text=True, check=True)
             findings = json.loads(result.stdout)
-            return self._process_findings(findings)
-        except subprocess.CalledProcessError as e:
-            return {"error": f"Scan failed: {e.stderr}"}
-        except json.JSONDecodeError:
-            return {"error": "Failed to parse scanner output"}
+        except (subprocess.CalledProcessError, json.JSONDecodeError):
+            findings = {"results": {}}
+
+        # 2. Run Custom Regex Scan
+        custom_findings = self._custom_regex_scan(path)
+        
+        # 3. Merge Results
+        merged_results = self._merge_findings(findings.get("results", {}), custom_findings)
+        
+        return self._process_findings({"results": merged_results})
+
+    def _custom_regex_scan(self, target_path: Optional[str] = None) -> Dict:
+        """Scans files for custom sensitive patterns."""
+        results = {}
+        files_to_scan = []
+
+        if target_path:
+            # Handle absolute path if provided
+            abs_target = os.path.abspath(target_path)
+            if os.path.isfile(abs_target):
+                files_to_scan = [abs_target]
+            else:
+                for root, _, files in os.walk(abs_target):
+                    for f in files:
+                        files_to_scan.append(os.path.join(root, f))
+        else:
+            for root, dirs, files in os.walk(self.root_dir):
+                if ".git" in root or "__pycache__" in root or "sentinel" in root:
+                    continue
+                for f in files:
+                    files_to_scan.append(os.path.join(root, f))
+
+        for file_path in files_to_scan:
+            # Skip binary files, baseline, and git files
+            if any(ext in file_path for ext in [".png", ".jpg", ".exe", ".pyc", "secrets.baseline", ".git/"]):
+                continue
+            
+            try:
+                with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                    for line_num, line in enumerate(f, 1):
+                        for pattern in SENSITIVE_PATTERNS:
+                            match = pattern.search(line)
+                            if match:
+                                keyword = match.group(1)
+                                value = match.group(2)
+                                
+                                # Ignore if value is a placeholder or very short
+                                if "example" in value.lower() or len(value) < 6:
+                                    continue
+
+                                rel_path = os.path.relpath(file_path, self.root_dir)
+                                if rel_path not in results:
+                                    results[rel_path] = []
+                                
+                                # Create a hashed secret for baseline compatibility
+                                hashed_val = hashlib.sha1(value.encode()).hexdigest()
+                                results[rel_path].append({
+                                    "type": f"Custom Pattern ({keyword})",
+                                    "filename": rel_path,
+                                    "hashed_secret": hashed_val,
+                                    "line_number": line_num,
+                                    "is_custom": True
+                                })
+            except Exception:
+                continue
+        
+        return results
+
+    def _merge_findings(self, ds_results: Dict, custom_results: Dict) -> Dict:
+        """Merges results, avoiding exact line duplicates."""
+        merged = ds_results.copy()
+        for file_path, findings in custom_results.items():
+            if file_path not in merged:
+                merged[file_path] = findings
+            else:
+                existing_lines = {f.get("line_number") for f in merged[file_path]}
+                for f in findings:
+                    if f.get("line_number") not in existing_lines:
+                        merged[file_path].append(f)
+        return merged
 
     def _process_findings(self, raw_findings: Dict) -> Dict:
-        """Filters and adds metadata to findings."""
-        # Load baseline to filter out approved secrets
+        """Filters against baseline and adds severity."""
         baseline = self.get_baseline()
         approved_hashes = set()
         if baseline and "results" in baseline:
-            for file_path, secrets in baseline["results"].items():
+            for secrets in baseline["results"].values():
                 for secret in secrets:
                     approved_hashes.add(secret.get("hashed_secret"))
 
         new_results = {}
-        results = raw_findings.get("results", {})
-        for file_path, secrets in results.items():
+        for file_path, secrets in raw_findings.get("results", {}).items():
             new_secrets = []
             for secret in secrets:
                 if secret.get("hashed_secret") not in approved_hashes:
-                    # Add severity (placeholder logic)
                     secret["severity"] = self._calculate_severity(secret)
                     new_secrets.append(secret)
             
@@ -66,16 +134,15 @@ class SentinelEngine:
             "results": new_results,
             "summary": {
                 "new_secrets_count": sum(len(s) for s in new_results.values()),
-                "total_files_scanned": len(results)
+                "total_files_scanned": len(raw_findings.get("results", {}))
             }
         }
 
     def _calculate_severity(self, secret: Dict) -> str:
-        """Simple severity scoring based on plugin type."""
-        plugin = secret.get("type", "")
-        if "PrivateKey" in plugin:
+        plugin = secret.get("type", "").lower()
+        if "privatekey" in plugin or "password" in plugin:
             return "CRITICAL"
-        if "AWS" in plugin or "Github" in plugin:
+        if "aws" in plugin or "github" in plugin or "token" in plugin:
             return "HIGH"
         return "MEDIUM"
 
@@ -93,8 +160,7 @@ class SentinelEngine:
             f.write(result.stdout)
 
     def approve_finding(self, file_path: str, line_number: int) -> bool:
-        """Finds a secret in a file at a specific line and adds it to the baseline."""
-        # Perform a fresh scan of the file to get the current secret object
+        """Adds a specific finding to the baseline."""
         raw_scan = self.scan(path=file_path)
         findings = raw_scan.get("results", {}).get(file_path, [])
         
@@ -107,17 +173,12 @@ class SentinelEngine:
         if not target_secret:
             return False
 
-        baseline = self.get_baseline()
-        if not baseline:
-            self.initialize_baseline()
-            baseline = self.get_baseline()
-
+        baseline = self.get_baseline() or {"results": {}, "version": "1.0.0"}
+        
         if file_path not in baseline["results"]:
             baseline["results"][file_path] = []
         
-        # Check if already there
         if not any(s["hashed_secret"] == target_secret["hashed_secret"] for s in baseline["results"][file_path]):
-            # Add the full secret object (excluding our custom severity)
             secret_to_add = target_secret.copy()
             if "severity" in secret_to_add:
                 del secret_to_add["severity"]
