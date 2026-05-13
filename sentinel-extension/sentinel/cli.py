@@ -3,7 +3,7 @@ import json
 import sys
 import os
 import signal
-from sentinel.engine import SentinelEngine
+from .engine import SentinelEngine
 
 PID_FILE = ".sentinel.pid"
 

@@ -3,7 +3,7 @@ from mcp.server.models import InitializationOptions
 from mcp.server import NotificationOptions, Server
 from mcp.server.stdio import stdio_server
 import mcp.types as types
-from sentinel.engine import SentinelEngine
+from .engine import SentinelEngine
 
 # Initialize the Sentinel Engine
 engine = SentinelEngine()

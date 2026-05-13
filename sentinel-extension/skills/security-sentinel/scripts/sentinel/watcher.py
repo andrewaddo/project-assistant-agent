@@ -2,7 +2,7 @@ import time
 import os
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-from sentinel.engine import SentinelEngine
+from .engine import SentinelEngine
 import click
 
 class SentinelHandler(FileSystemEventHandler):
