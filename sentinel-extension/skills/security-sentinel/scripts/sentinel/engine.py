@@ -92,25 +92,39 @@ class SentinelEngine:
         with open(self.baseline_path, "w") as f:
             f.write(result.stdout)
 
-    def approve_finding(self, file_path: str, hashed_secret: str):
-        """Adds a specific finding to the baseline."""
+    def approve_finding(self, file_path: str, line_number: int) -> bool:
+        """Finds a secret in a file at a specific line and adds it to the baseline."""
+        # Perform a fresh scan of the file to get the current secret object
+        raw_scan = self.scan(path=file_path)
+        findings = raw_scan.get("results", {}).get(file_path, [])
+        
+        target_secret = None
+        for secret in findings:
+            if secret.get("line_number") == line_number:
+                target_secret = secret
+                break
+        
+        if not target_secret:
+            return False
+
         baseline = self.get_baseline()
         if not baseline:
             self.initialize_baseline()
             baseline = self.get_baseline()
 
-        # Logic to append the hash to the baseline
-        # detect-secrets-hook has more complex logic, but for our 'approve'
-        # we can manually inject it or use detect-secrets to update it.
-        # For simplicity in this first draft:
         if file_path not in baseline["results"]:
             baseline["results"][file_path] = []
         
         # Check if already there
-        if not any(s["hashed_secret"] == hashed_secret for s in baseline["results"][file_path]):
-            # We'd need the full secret object from the latest scan to do this perfectly
-            # For now, let's assume we have it.
-            pass
+        if not any(s["hashed_secret"] == target_secret["hashed_secret"] for s in baseline["results"][file_path]):
+            # Add the full secret object (excluding our custom severity)
+            secret_to_add = target_secret.copy()
+            if "severity" in secret_to_add:
+                del secret_to_add["severity"]
+            baseline["results"][file_path].append(secret_to_add)
+            
+            with open(self.baseline_path, "w") as f:
+                json.dump(baseline, f, indent=2)
+            return True
         
-        with open(self.baseline_path, "w") as f:
-            json.dump(baseline, f, indent=2)
+        return False

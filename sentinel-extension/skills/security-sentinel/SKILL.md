@@ -16,23 +16,28 @@ When the user mentions "Sentinel" or "/sentinel", follow these rules:
 
 ## Available Tools (Subcommands)
 
-As the Security Sentinel agent, you have access to the following native tools. Execute them using `python3 -m sentinel.cli <command>` from the project root.
-...
+As the Security Sentinel agent, you have access to the following native tools. Execute them using `python3 -m sentinel-extension.sentinel.cli <command>` from the project root.
 
 ### 1. `scan`
-**Usage**: `python3 -m sentinel.cli scan [--path <path>]`
+**Usage**: `python3 -m sentinel-extension.sentinel.cli scan [--path <path>]`
 **Purpose**: Perform an on-demand audit. Use this when the user asks for a security check or before a major operation.
 
 ### 2. `watch`
-**Usage**: `python3 -m sentinel.cli watch --background`
+**Usage**: `python3 -m sentinel-extension.sentinel.cli watch --background`
 **Purpose**: Start the proactive background watcher. Use this to enable real-time protection.
 
-### 3. `stop`
-**Usage**: `python3 -m sentinel.cli stop`
+### 3. `approve`
+**Usage**: `python3 -m sentinel-extension.sentinel.cli approve <file_path> <line_number>`
+**Purpose**: Appends a specific finding to the baseline as an approved exception. Use this when the user confirms a finding is a false positive.
+
+### 4. `stop`
+**Usage**: `python3 -m sentinel-extension.sentinel.cli stop`
 **Purpose**: Stop the background watcher.
 
-### 4. `init`
-**Usage**: `python3 -m sentinel.cli init`
+### 5. `init`
+**Usage**: `python3 -m sentinel-extension.sentinel.cli init`
+**Purpose**: Create or reset the security baseline (`.secrets.baseline`).
+
 **Purpose**: Create or reset the security baseline (`.secrets.baseline`).
 
 ## Core Workflows

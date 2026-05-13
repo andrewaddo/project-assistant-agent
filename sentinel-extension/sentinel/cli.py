@@ -79,6 +79,17 @@ def watch(background):
                 os.remove(PID_FILE)
 
 @cli.command()
+@click.argument('file_path')
+@click.argument('line_number', type=int)
+def approve(file_path, line_number):
+    """Approve a finding to add it to the baseline."""
+    engine = SentinelEngine()
+    if engine.approve_finding(file_path, line_number):
+        click.echo(click.style(f"✅ Approved finding in {file_path} on line {line_number}.", fg="green"))
+    else:
+        click.echo(click.style(f"❌ Could not find or approve secret in {file_path} on line {line_number}.", fg="red"))
+
+@cli.command()
 def stop():
     """Stop the background proactive watcher."""
     if not os.path.exists(PID_FILE):
