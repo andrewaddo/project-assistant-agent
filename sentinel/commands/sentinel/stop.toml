@@ -1,2 +1,2 @@
 description = "Stop the background proactive watcher."
-prompt = "Sentinel, please stop the background watcher process."
+prompt = "Sentinel, please execute your 'stop' command. Use the dynamic paths outlined in your SKILL.md to locate and run your bundled scripts."

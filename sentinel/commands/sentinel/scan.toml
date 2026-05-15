@@ -1,2 +1,2 @@
 description = "Run an on-demand security scan for secrets."
-prompt = "Sentinel, please perform a full security scan of the project to check for any unapproved secrets."
+prompt = "Sentinel, please execute your 'scan' command. Use the dynamic paths outlined in your SKILL.md to locate and run your bundled scripts."

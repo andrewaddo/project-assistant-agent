@@ -1,2 +1,2 @@
 description = "Approve a finding to add it to the baseline as a strict exception."
-prompt = "Sentinel, please approve the finding in {{file}} on line {{line}}."
+prompt = "Sentinel, please execute your 'approve' command for the following finding: {{args}}. Use the dynamic paths outlined in your SKILL.md to locate and run your bundled scripts."

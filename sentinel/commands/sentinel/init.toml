@@ -1,2 +1,2 @@
 description = "Initialize or reset the security baseline (.secrets.baseline)."
-prompt = "Sentinel, please initialize the security baseline for this project."
+prompt = "Sentinel, please execute your 'init' command. Use the dynamic paths outlined in your SKILL.md to locate and run your bundled scripts."

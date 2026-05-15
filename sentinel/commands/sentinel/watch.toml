@@ -1,2 +1,2 @@
 description = "Start the proactive background watcher for real-time alerts."
-prompt = "Sentinel, please start the proactive background watcher to monitor for secrets as I save files."
+prompt = "Sentinel, please execute your 'watch' command with the --background flag. Use the dynamic paths outlined in your SKILL.md to locate and run your bundled scripts."

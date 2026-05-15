@@ -16,48 +16,47 @@ When the user mentions "Sentinel" or "/sentinel", follow these rules:
 
 ## Available Tools (Subcommands)
 
-As the Security Sentinel agent, you have access to the following native tools. Execute them using `python3 -m sentinel-extension.sentinel.cli <command>` from the project root.
+As the Security Sentinel agent, you have access to several native tools. 
+To execute them universally across any environment, you **MUST** locate the `scripts/` directory within this skill's `<available_resources>`. 
+Then, from the user's project root, use the `run_shell_command` tool with the following pattern to inject your scripts into the python path:
+
+`PYTHONPATH=<absolute_path_to_skill_scripts> python3 -m sentinel.cli <command>`
 
 ### 1. `scan`
-**Usage**: `python3 -m sentinel-extension.sentinel.cli scan [--path <path>]`
+**Usage**: `PYTHONPATH=... python3 -m sentinel.cli scan [--path <path>]`
 **Purpose**: Perform an on-demand audit. Use this when the user asks for a security check or before a major operation.
 
 ### 2. `watch`
-**Usage**: `python3 -m sentinel-extension.sentinel.cli watch --background`
+**Usage**: `PYTHONPATH=... python3 -m sentinel.cli watch --background`
 **Purpose**: Start the proactive background watcher. Use this to enable real-time protection.
 
 ### 3. `approve`
-**Usage**: `python3 -m sentinel-extension.sentinel.cli approve <file_path> <line_number>`
+**Usage**: `PYTHONPATH=... python3 -m sentinel.cli approve <file_path> <line_number>`
 **Purpose**: Appends a specific finding to the baseline as an approved exception. Use this when the user confirms a finding is a false positive.
 
 ### 4. `stop`
-**Usage**: `python3 -m sentinel-extension.sentinel.cli stop`
+**Usage**: `PYTHONPATH=... python3 -m sentinel.cli stop`
 **Purpose**: Stop the background watcher.
 
 ### 5. `init`
-**Usage**: `python3 -m sentinel-extension.sentinel.cli init`
-**Purpose**: Create or reset the security baseline (`.secrets.baseline`).
-
+**Usage**: `PYTHONPATH=... python3 -m sentinel.cli init`
 **Purpose**: Create or reset the security baseline (`.secrets.baseline`).
 
 ## Core Workflows
 
 ### 1. Initializing the Baseline
-Before starting, you must create a baseline of existing secrets or false positives.
-- Run: `python3 -m sentinel.cli init`
+Before starting, you must create a baseline of existing secrets or false positives using the `init` tool.
 
 ### 2. Proactive Monitoring (Background)
-To enable real-time alerts:
-- Run: `python3 -m sentinel.cli watch --background`
+To enable real-time alerts, start the background process using the `watch` tool.
 
 ### 3. Ad-hoc Security Audit
-To scan the entire project or a specific file on demand:
-- Run: `python3 -m sentinel.cli scan`
+To scan the entire project or a specific file on demand, use the `scan` tool.
 
 ### 4. Resolving Findings
 If a secret is detected:
 1. **Fix it**: Move the secret to an ignored file (e.g., `.env`).
-2. **Approve it**: If it's a false positive, run `sentinel approve` (coming soon) to add it to the baseline.
+2. **Approve it**: If it's a false positive, run the `approve` tool to add it to the baseline.
 
 ## Troubleshooting
-If `python3 -m sentinel.cli` is not found, ensure you are in the project root and dependencies are installed via `pip install -r requirements.txt`.
+Ensure dependencies are installed via `pip install -r <absolute_path_to_skill_assets>/requirements.txt` if modules are missing.
